@@ -2,13 +2,14 @@
 use crate::CacheEntry;
 use crate::commands::{change_reaction_role, track_emoji_usage, track_song};
 use crate::constants::HTTP_CLIENT;
-use crate::{Data, UserError};
+use crate::{Data, ReplyKind, UserError};
 use anyhow::anyhow;
 use itertools::Itertools;
 use poise::serenity_prelude::json::json;
 use poise::serenity_prelude::*;
 use poise::{CreateReply, FrameworkContext};
 use rand::random_bool;
+use rand::seq::IndexedRandom;
 use regex::Regex;
 use songbird::input::File;
 use sqlx::query;
@@ -155,25 +156,45 @@ async fn auto_reply(
         let amount_replied = stats.count.unwrap_or_default().to_string();
 
         let user = reply.user.to_user(ctx.http()).await?;
-        let desc = reply
-            .description
-            .replace("{user}", &user.to_string())
-            .replace("{replies}", &amount_replied);
+
         let mut m = CreateMessage::new();
         // embeds can't ping
         if reply.ping {
             m = m.content(user.mention().to_string());
         }
-        let message = m.reference_message(new_message).embed(
-            CreateEmbed::new()
-                .title(&reply.title)
-                .description(desc)
-                .colour(reply.colour)
-                .author(
-                    CreateEmbedAuthor::new(&user.name)
-                        .icon_url(user.avatar_url().unwrap_or(user.default_avatar_url())),
-                ),
-        );
+
+        let m = m.reference_message(new_message);
+
+        let message = match &reply.kind {
+            ReplyKind::Embed {
+                title,
+                description,
+                colour,
+            } => {
+                let description = description
+                    .replace("{user}", &user.to_string())
+                    .replace("{replies}", &amount_replied);
+                m.embed(
+                    CreateEmbed::new()
+                        .title(title)
+                        .description(description)
+                        .colour(*colour)
+                        .author(
+                            CreateEmbedAuthor::new(&user.name)
+                                .icon_url(user.avatar_url().unwrap_or(user.default_avatar_url())),
+                        ),
+                )
+            }
+            ReplyKind::Message(content) => m.content(content),
+            ReplyKind::MessageRandom(possible_replies) => {
+                let possible_replies: Vec<_> = possible_replies.clone().into();
+                let chosen_reply = match possible_replies.choose(&mut rand::rng()) {
+                    Some(a) => a,
+                    None => unreachable!("Choosing from a NonEmpty Vec should never return None."),
+                };
+                m.content(chosen_reply)
+            }
+        };
         new_message
             .channel_id
             .send_message(&ctx.http, message)

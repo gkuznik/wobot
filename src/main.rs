@@ -17,6 +17,7 @@ use crate::constants::ONE_DAY;
 use itertools::Itertools;
 #[cfg(feature = "activity")]
 use mini_moka::sync::{Cache, CacheBuilder};
+use nonempty::NonEmpty;
 use poise::builtins::{register_globally, register_in_guild};
 use poise::serenity_prelude::{
     ChannelId, ClientBuilder, Colour, GatewayIntents, GuildId, ReactionType, UserId,
@@ -36,16 +37,25 @@ mod easy_embed;
 mod handler;
 
 #[derive(Debug, Deserialize)]
+enum ReplyKind {
+    Embed {
+        title: String,
+        description: String,
+        #[serde(default)]
+        /// colour as an integer
+        colour: Colour,
+    },
+    Message(String),
+    MessageRandom(NonEmpty<String>),
+}
+
+#[derive(Debug, Deserialize)]
 struct AutoReply {
     keywords: Vec<String>,
     user: UserId,
-    title: String,
-    description: String,
+    kind: ReplyKind,
     #[serde(default)]
     ping: bool,
-    #[serde(default)]
-    /// colour as an integer
-    colour: Colour,
     chance: Option<f64>,
 }
 
