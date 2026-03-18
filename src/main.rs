@@ -4,7 +4,6 @@ use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt::Debug;
 use std::fs::read_to_string;
-use std::sync::atomic::AtomicU64;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use std::{error::Error, fmt};
@@ -12,111 +11,28 @@ use std::{error::Error, fmt};
 use crate::check_birthday::check_birthdays;
 use crate::check_reminder::check_reminders;
 use crate::commands::*;
+use crate::config::{AutoReply, Celery, Config, LinkFix, convert};
 #[cfg(feature = "activity")]
 use crate::constants::ONE_DAY;
 use itertools::Itertools;
 #[cfg(feature = "activity")]
 use mini_moka::sync::{Cache, CacheBuilder};
-use nonempty::NonEmpty;
 use poise::builtins::{register_globally, register_in_guild};
 use poise::serenity_prelude::{
-    ChannelId, ClientBuilder, Colour, GatewayIntents, GuildId, ReactionType, UserId,
+    ChannelId, ClientBuilder, GatewayIntents, GuildId, ReactionType, UserId,
 };
 use poise::{EditTracker, Framework, PrefixFrameworkOptions};
-use serde::Deserialize;
 use songbird::serenity::SerenityInit;
 use sqlx::{PgPool, query};
-use tokio::sync::Mutex;
 use tracing::info;
 
 mod check_birthday;
 mod check_reminder;
 mod commands;
+mod config;
 mod constants;
 mod easy_embed;
 mod handler;
-
-#[derive(Debug, Deserialize)]
-enum ReplyKind {
-    Embed {
-        title: String,
-        description: String,
-        user: UserId,
-        #[serde(default)]
-        ping: bool,
-        #[serde(default)]
-        /// colour as an integer
-        colour: Colour,
-    },
-    Message(String),
-    RandomMessage(NonEmpty<String>),
-}
-
-#[derive(Debug, Deserialize)]
-struct AutoReply {
-    keywords: Vec<String>,
-    kind: ReplyKind,
-    chance: Option<f64>,
-}
-
-#[derive(Debug, Deserialize)]
-struct LinkFix {
-    host: Option<String>,
-    tracking: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-struct CeleryConfig {
-    prompt: String,
-    chance: f64,
-    cooldown: u64,
-}
-
-#[derive(Debug)]
-struct Celery {
-    prompt: String,
-    chance: f64,
-    cooldown: u64,
-    counter: AtomicU64,
-    mutex: Mutex<()>,
-}
-
-fn convert(config: HashMap<ChannelId, CeleryConfig>) -> HashMap<ChannelId, Celery> {
-    config
-        .into_iter()
-        .map(|(k, v)| {
-            (
-                k,
-                Celery {
-                    prompt: v.prompt,
-                    chance: v.chance,
-                    cooldown: v.cooldown,
-                    counter: AtomicU64::new(0),
-                    mutex: Mutex::new(()),
-                },
-            )
-        })
-        .collect()
-}
-
-#[derive(Deserialize)]
-struct Config {
-    #[cfg(feature = "activity")]
-    #[serde(default)]
-    active_guilds: Vec<GuildId>,
-    #[serde(default)]
-    event_channel_per_guild: HashMap<GuildId, ChannelId>,
-    #[serde(default)]
-    link_fixes: HashMap<String, LinkFix>,
-    #[serde(default)]
-    auto_reactions: HashMap<String, ReactionType>,
-    #[serde(default)]
-    auto_replies: Vec<AutoReply>,
-    #[serde(default)]
-    entry_sounds: HashMap<UserId, String>,
-    #[serde(default)]
-    celery: HashMap<ChannelId, CeleryConfig>,
-}
 
 #[cfg(feature = "activity")]
 #[derive(Debug, Clone)]
@@ -259,102 +175,4 @@ async fn main() {
         .await;
 
     client.unwrap().start().await.unwrap();
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::{AutoReply, ReplyKind};
-    use poise::serenity_prelude::Colour;
-
-    #[test]
-    fn parse_autoreply_embed() {
-        let test_str = r#"{
-            keywords: [
-              "wobot info"
-              "wobot help"
-            ]
-            kind: {
-              Embed: {
-                title: About WoBot
-                description: "Hi, I'm **WoBot**!"
-                user: 123456
-                colour: 15844367
-              }
-            }
-          }"#;
-        let auto_reply: AutoReply =
-            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
-        assert!(auto_reply.chance.is_none());
-        assert_eq!(auto_reply.keywords, vec!["wobot info", "wobot help"]);
-        match auto_reply.kind {
-            ReplyKind::Embed {
-                title,
-                description,
-                user,
-                ping,
-                colour,
-            } => {
-                assert!(!ping);
-                assert_eq!(title, "About WoBot");
-                assert_eq!(description, "Hi, I'm **WoBot**!");
-                assert_eq!(user, 123456);
-                assert_eq!(colour, Colour::new(15844367));
-            }
-            _ => panic!("Wrong ReplyKind"),
-        }
-    }
-
-    #[test]
-    fn parse_autoreply_message() {
-        let test_str = r#"{
-            keywords: [
-              "hello"
-            ]
-            chance: 0.5
-            kind: {
-              Message: "Hello, I am WoBot!"
-            }
-          }"#;
-        let auto_reply: AutoReply =
-            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
-
-        assert_eq!(auto_reply.chance, Some(0.5));
-        assert_eq!(auto_reply.keywords, vec!["hello"]);
-
-        match auto_reply.kind {
-            ReplyKind::Message(msg) => {
-                assert_eq!(msg, "Hello, I am WoBot!");
-            }
-            _ => panic!("Wrong ReplyKind"),
-        }
-    }
-
-    #[test]
-    fn parse_autoreply_random_message() {
-        let test_str = r#"{
-            keywords: [
-              "flip"
-              "coin"
-            ]
-            kind: {
-              RandomMessage: [
-                "Heads!"
-                "Tails!"
-              ]
-            }
-          }"#;
-        let auto_reply: AutoReply =
-            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
-
-        assert!(auto_reply.chance.is_none());
-        assert_eq!(auto_reply.keywords, vec!["flip", "coin"]);
-
-        match auto_reply.kind {
-            ReplyKind::RandomMessage(messages) => {
-                let msgs: Vec<_> = messages.into_iter().collect();
-                assert_eq!(msgs, vec!["Heads!", "Tails!"]);
-            }
-            _ => panic!("Wrong ReplyKind"),
-        }
-    }
 }
