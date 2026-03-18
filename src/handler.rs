@@ -8,6 +8,7 @@ use itertools::Itertools;
 use poise::serenity_prelude::json::json;
 use poise::serenity_prelude::*;
 use poise::{CreateReply, FrameworkContext};
+use rand::prelude::IteratorRandom;
 use rand::random_bool;
 use rand::seq::IndexedRandom;
 use regex::Regex;
@@ -155,22 +156,21 @@ async fn auto_reply(
             .await?;
         let amount_replied = stats.count.unwrap_or_default().to_string();
 
-        let user = reply.user.to_user(ctx.http()).await?;
-
-        let mut m = CreateMessage::new();
-        // embeds can't ping
-        if reply.ping {
-            m = m.content(user.mention().to_string());
-        }
-
-        let m = m.reference_message(new_message);
+        let mut m = CreateMessage::new().reference_message(new_message);
 
         let message = match &reply.kind {
             ReplyKind::Embed {
                 title,
                 description,
+                user,
+                ping,
                 colour,
             } => {
+                let user = user.to_user(ctx.http()).await?;
+                // embeds can't ping
+                if *ping {
+                    m = m.content(user.mention().to_string());
+                }
                 let description = description
                     .replace("{user}", &user.to_string())
                     .replace("{replies}", &amount_replied);
@@ -186,12 +186,11 @@ async fn auto_reply(
                 )
             }
             ReplyKind::Message(content) => m.content(content),
-            ReplyKind::MessageRandom(possible_replies) => {
-                let possible_replies: Vec<_> = possible_replies.clone().into();
-                let chosen_reply = match possible_replies.choose(&mut rand::rng()) {
-                    Some(a) => a,
-                    None => unreachable!("Choosing from a NonEmpty Vec should never return None."),
-                };
+            ReplyKind::RandomMessage(possible_replies) => {
+                let chosen_reply = possible_replies
+                    .iter()
+                    .choose(&mut rand::rng())
+                    .expect("Choosing from a NonEmpty Vec should never return None.");
                 m.content(chosen_reply)
             }
         };
