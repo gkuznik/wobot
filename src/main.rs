@@ -260,3 +260,101 @@ async fn main() {
 
     client.unwrap().start().await.unwrap();
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{AutoReply, ReplyKind};
+    use poise::serenity_prelude::Colour;
+
+    #[test]
+    fn parse_autoreply_embed() {
+        let test_str = r#"{
+            keywords: [
+              "wobot info"
+              "wobot help"
+            ]
+            kind: {
+              Embed: {
+                title: About WoBot
+                description: "Hi, I'm **WoBot**!"
+                user: 123456
+                colour: 15844367
+              }
+            }
+          }"#;
+        let auto_reply: AutoReply =
+            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
+        assert!(auto_reply.chance.is_none());
+        assert_eq!(auto_reply.keywords, vec!["wobot info", "wobot help"]);
+        match auto_reply.kind {
+            ReplyKind::Embed {
+                title,
+                description,
+                user,
+                ping,
+                colour,
+            } => {
+                assert!(!ping);
+                assert_eq!(title, "About WoBot");
+                assert_eq!(description, "Hi, I'm **WoBot**!");
+                assert_eq!(user, 123456);
+                assert_eq!(colour, Colour::new(15844367));
+            }
+            _ => panic!("Wrong ReplyKind"),
+        }
+    }
+
+    #[test]
+    fn parse_autoreply_message() {
+        let test_str = r#"{
+            keywords: [
+              "hello"
+            ]
+            chance: 0.5
+            kind: {
+              Message: "Hello, I am WoBot!"
+            }
+          }"#;
+        let auto_reply: AutoReply =
+            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
+
+        assert_eq!(auto_reply.chance, Some(0.5));
+        assert_eq!(auto_reply.keywords, vec!["hello"]);
+
+        match auto_reply.kind {
+            ReplyKind::Message(msg) => {
+                assert_eq!(msg, "Hello, I am WoBot!");
+            }
+            _ => panic!("Wrong ReplyKind"),
+        }
+    }
+
+    #[test]
+    fn parse_autoreply_random_message() {
+        let test_str = r#"{
+            keywords: [
+              "flip"
+              "coin"
+            ]
+            kind: {
+              RandomMessage: [
+                "Heads!"
+                "Tails!"
+              ]
+            }
+          }"#;
+        let auto_reply: AutoReply =
+            deser_hjson::from_str(test_str).expect("Failed to parse auto reply");
+
+        assert!(auto_reply.chance.is_none());
+        assert_eq!(auto_reply.keywords, vec!["flip", "coin"]);
+
+        match auto_reply.kind {
+            ReplyKind::RandomMessage(messages) => {
+                let msgs: Vec<_> = messages.into_iter().collect();
+                assert_eq!(msgs, vec!["Heads!", "Tails!"]);
+            }
+            _ => panic!("Wrong ReplyKind"),
+        }
+    }
+}

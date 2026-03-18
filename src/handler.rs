@@ -10,7 +10,6 @@ use poise::serenity_prelude::*;
 use poise::{CreateReply, FrameworkContext};
 use rand::prelude::IteratorRandom;
 use rand::random_bool;
-use rand::seq::IndexedRandom;
 use regex::Regex;
 use songbird::input::File;
 use sqlx::query;
