@@ -3,7 +3,7 @@ use std::ops::Range;
 use poise::serenity_prelude::CreateEmbed;
 use poise::{CreateReply, command};
 #[cfg(not(test))]
-use rand::{Rng, rng};
+use rand::{RngExt, rng};
 use serde::Deserialize;
 
 use crate::Context;

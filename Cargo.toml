@@ -10,31 +10,31 @@ default = ["activity"]
 activity = []
 
 [dependencies]
-ab_glyph = "0.2.29"
-anyhow = "1.0.97"
+ab_glyph = "0.2.32"
+anyhow = "1.0.102"
 base64 = "0.22.1"
-chrono = { version = "0.4.40", default-features = false, features = ["std", "clock"] }
-chrono-tz = "0.10.3"
-deser-hjson = "2.2.4"
+chrono = { version = "0.4.44", default-features = false, features = ["std", "clock"] }
+chrono-tz = "0.10.4"
+deser-hjson = "2.2.5"
 deunicode = "1.6.2"
-ics = { version = "0.5", default-features = false }
+ics = { version = "0.5.8", default-features = false }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png", "webp"] }
-imageproc = "0.25.0"
+imageproc = "0.26.1"
 itertools = "0.14.0"
 nonempty = { version = "0.12.0", features = ["serialize"] }
 mini-moka = "0.10.3"
 parse_duration = "2.1.1"
-percent-encoding = "2.3.1"
+percent-encoding = "2.3.2"
 poise = "0.6.1"
-rand = "0.9.0"
-regex = "1.11.1"
+rand = "0.10.0"
+regex = "1.12.3"
 reqwest = { version = "0.12.15", features = ["json"] }
-serde = "1.0.219"
+serde = "1.0.228"
 songbird = { version = "0.5.0", features = ["builtin-queue", "rustls"] }
 symphonia = { version = "0.5", default-features = false, features = ["mp3", "ogg", "vorbis"] }
 sqlx = { version = "0.8.5", default-features = false, features = ["runtime-tokio", "tls-rustls", "chrono", "postgres", "bigdecimal", "migrate", "macros"] }
-stitchy-core = "0.1.5"
-tokio = { version = "1.44.2", features = ["rt-multi-thread", "macros"] }
-tracing = "0.1.41"
-tracing-subscriber = "0.3.19"
+stitchy-core = "0.1.6"
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
 uwuify = { version = "0.2.2", default-features = false }
