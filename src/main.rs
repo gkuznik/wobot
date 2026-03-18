@@ -41,21 +41,21 @@ enum ReplyKind {
     Embed {
         title: String,
         description: String,
+        user: UserId,
+        #[serde(default)]
+        ping: bool,
         #[serde(default)]
         /// colour as an integer
         colour: Colour,
     },
     Message(String),
-    MessageRandom(NonEmpty<String>),
+    RandomMessage(NonEmpty<String>),
 }
 
 #[derive(Debug, Deserialize)]
 struct AutoReply {
     keywords: Vec<String>,
-    user: UserId,
     kind: ReplyKind,
-    #[serde(default)]
-    ping: bool,
     chance: Option<f64>,
 }
 
