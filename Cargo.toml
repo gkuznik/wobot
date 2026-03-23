@@ -38,3 +38,7 @@ tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 uwuify = { version = "0.2.2", default-features = false }
+
+# until https://github.com/serenity-rs/songbird/pull/291 is merged
+[patch.crates-io]
+songbird = { git = "https://github.com/beerpsi-forks/songbird", branch = "davey" }
