@@ -8,9 +8,6 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     libopus-dev
 
-RUN curl -L https://yt-dl.org/downloads/latest/youtube-dl -o /usr/local/bin/youtube-dl\
- && chmod a+rx /usr/local/bin/youtube-dl
-
 # build dependencies first
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && \
@@ -37,12 +34,17 @@ sed -i '/path-exclude \/usr\/share\/groff/d' /etc/dpkg/dpkg.cfg.d/docker
 # add non-free
 sed -i 's/Components: main/Components: main non-free/' /etc/apt/sources.list.d/debian.sources
 apt update
-apt install -y curl libopus-dev man manpages-dev manpages-posix manpages-posix-dev
+# dependencies + manpages
+apt install -y curl unzip libopus-dev man manpages-dev manpages-posix manpages-posix-dev
 apt install --reinstall coreutils
 rm -rf /var/lib/apt/lists/*
 EOF
 
-COPY --from=builder /usr/local/bin/youtube-dl /usr/local/bin/youtube-dl
+RUN curl -fsSL https://deno.land/install.sh | sh
+
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/youtube-dl && \
+    chmod a+rx /usr/local/bin/youtube-dl
+
 COPY --from=builder /target/release/wobot /wobot
 
 CMD ["/wobot"]

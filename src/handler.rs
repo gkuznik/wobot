@@ -251,8 +251,7 @@ async fn celery_fact(ctx: &Context, data: &Data, channel: ChannelId) -> anyhow::
             return Ok(());
         }
 
-        let payload =
-            json!({"model": "deepseek-v3.1:671b", "prompt": config.prompt, "stream": false});
+        let payload = json!({"model": config.model, "prompt": config.prompt, "stream": false});
 
         let response = HTTP_CLIENT
             .post("https://ollama.com/api/generate")

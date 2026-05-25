@@ -38,6 +38,7 @@ pub(crate) struct LinkFix {
 #[derive(Debug, Deserialize)]
 pub(crate) struct CeleryConfig {
     pub(crate) prompt: String,
+    pub(crate) model: String,
     pub(crate) chance: f64,
     pub(crate) cooldown: u64,
 }
@@ -45,6 +46,7 @@ pub(crate) struct CeleryConfig {
 #[derive(Debug)]
 pub(crate) struct Celery {
     pub(crate) prompt: String,
+    pub(crate) model: String,
     pub(crate) chance: f64,
     pub(crate) cooldown: u64,
     pub(crate) counter: AtomicU64,
@@ -59,6 +61,7 @@ pub(crate) fn convert(config: HashMap<ChannelId, CeleryConfig>) -> HashMap<Chann
                 k,
                 Celery {
                     prompt: v.prompt,
+                    model: v.model,
                     chance: v.chance,
                     cooldown: v.cooldown,
                     counter: AtomicU64::new(0),
