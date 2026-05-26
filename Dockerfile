@@ -1,12 +1,8 @@
 FROM rust:1.92.0-slim-trixie AS builder
 
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    curl \
-    openssl \
-    libssl-dev \
-    pkg-config \
-    libopus-dev
+RUN apt update && apt install -y \
+    curl 7zip \
+    build-essential openssl libssl-dev pkg-config libopus-dev
 
 # build dependencies first
 COPY Cargo.toml Cargo.lock ./
@@ -22,6 +18,9 @@ COPY .sqlx ./.sqlx
 
 RUN cargo build --release --locked
 
+RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
+RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
 
 FROM debian:trixie-slim
 
@@ -33,18 +32,16 @@ sed -i '/path-exclude \/usr\/share\/groff/d' /etc/dpkg/dpkg.cfg.d/docker
 
 # add non-free
 sed -i 's/Components: main/Components: main non-free/' /etc/apt/sources.list.d/debian.sources
-apt update
+
 # dependencies + manpages
-apt install -y curl unzip libopus-dev man manpages-dev manpages-posix manpages-posix-dev
+apt update && apt install -y \
+    libopus-dev \
+    man manpages-dev manpages-posix manpages-posix-dev
 apt install --reinstall coreutils
 rm -rf /var/lib/apt/lists/*
 EOF
 
-RUN curl -fsSL https://deno.land/install.sh | sh
-
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/youtube-dl && \
-    chmod a+rx /usr/local/bin/youtube-dl
-
+COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --from=builder /target/release/wobot /wobot
 
 CMD ["/wobot"]
