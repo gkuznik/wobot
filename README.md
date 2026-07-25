@@ -58,6 +58,15 @@ Please make sure to run `cargo fmt` before committing.
 
 ### Dealing with the Database
 
+On a fresh PostgreSQL install you can set up a WoBot-specific database like this:
+
+```sql
+CREATE USER wobot WITH PASSWORD 'wobot';
+CREATE DATABASE wobot OWNER wobot;
+```
+
+You can then use this `DATABASE_URL`: `postgresql://wobot:wobot@localhost:5432/wobot`
+
 We use [SQLx](https://docs.rs/sqlx/latest/sqlx/) for database access and migrations.
 If you change database queries, you'll need to regenerate the .sqlx folder with:
 
@@ -113,10 +122,11 @@ Only `DISCORD_TOKEN` and `DATABASE_URL` (already set in `compose.yaml`) are requ
 <summary>Example .env file</summary>
 
 ```sh
+DATABASE_URL='postgresql://wobot:wobot@localhost:5432/wobot'
 DISCORD_TOKEN=''		# https://discord.com/developers/applications
 CAT_API_TOKEN=''		# https://thecatapi.com/signup
 DOG_API_TOKEN=''		# https://thedogapi.com/signup
-MENSAPLAN_TOKEN=''  	# https://github.com/Friendly-Banana/mensaplan#api
+MENSAPLAN_TOKEN=''	# https://github.com/Friendly-Banana/mensaplan#api
 OLLAMA_TOKEN=''
 ```
 
