@@ -36,7 +36,7 @@ sed -i 's/Components: main/Components: main non-free/' /etc/apt/sources.list.d/d
 # dependencies + manpages
 apt update && apt install -y \
     ca-certificates \
-    libopus-dev \
+    libopus-dev python3 \
     man manpages-dev manpages-posix manpages-posix-dev
 apt install --reinstall coreutils
 rm -rf /var/lib/apt/lists/*
