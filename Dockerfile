@@ -1,8 +1,9 @@
 FROM rust:1.92.0-slim-trixie AS builder
 
-RUN apt update && apt install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl 7zip \
-    build-essential openssl libssl-dev pkg-config libopus-dev
+    build-essential openssl libssl-dev pkg-config libopus-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 # build dependencies first
 COPY Cargo.toml Cargo.lock ./
@@ -34,15 +35,23 @@ sed -i '/path-exclude \/usr\/share\/groff/d' /etc/dpkg/dpkg.cfg.d/docker
 sed -i 's/Components: main/Components: main non-free/' /etc/apt/sources.list.d/debian.sources
 
 # dependencies + manpages
-apt update && apt install -y \
+apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    libopus-dev python3 \
+    libopus0 \
     man manpages-dev manpages-posix manpages-posix-dev
-apt install --reinstall coreutils
-rm -rf /var/lib/apt/lists/*
+apt-get install -y --reinstall --no-install-recommends coreutils
+rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+# create non-root user and group
+groupadd --system --gid 10001 wobot
+useradd --system --uid 10001 --gid wobot --no-create-home --shell /usr/sbin/nologin wobot
 EOF
 
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /target/release/wobot /wobot
+WORKDIR /app
 
-CMD ["/wobot"]
+COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /target/release/wobot /app/wobot
+
+USER wobot:wobot
+
+CMD ["/app/wobot"]

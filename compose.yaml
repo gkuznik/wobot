@@ -2,9 +2,11 @@ services:
   db:
     image: postgres:17-alpine
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
     environment:
       POSTGRES_USER: wobot
-      POSTGRES_PASSWORD: example
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-example}
       POSTGRES_DB: wobot_db
     volumes:
       - ./data:/var/lib/postgresql/data
@@ -15,14 +17,19 @@ services:
     build: .
     image: wobot
     restart: unless-stopped
+    init: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       - db
     environment:
-      DATABASE_URL: postgres://wobot:example@db:5432/wobot_db
+      DATABASE_URL: postgres://wobot:${POSTGRES_PASSWORD:-example}@db:5432/wobot_db
     env_file:
       - .env
     volumes:
-      - ./assets:/assets
+      - ./assets:/app/assets:ro
     networks:
       - wobot_network
 

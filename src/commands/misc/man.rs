@@ -1,5 +1,5 @@
-use crate::Context;
 use crate::commands::utils::remove_components_but_keep_embeds;
+use crate::{Context, UserError};
 use poise::CreateReply;
 use poise::serenity_prelude::{
     ComponentInteractionCollector, CreateActionRow, CreateButton, CreateInteractionResponse,
@@ -40,13 +40,54 @@ fn get_pages(input: Cow<str>) -> Vec<String> {
     pages
 }
 
+#[repr(u8)]
+#[derive(Copy, Clone, Debug, poise::ChoiceParameter)]
+pub(crate) enum Section {
+    #[name = "1 Executable programs or shell commands"]
+    Executables = 1,
+    #[name = "2 System calls (functions provided by the kernel)"]
+    SystemCalls = 2,
+    #[name = "3 Library calls (functions within program libraries)"]
+    LibraryCalls = 3,
+    #[name = "4 Special files (usually found in /dev)"]
+    SpecialFiles = 4,
+    #[name = "5 File formats and conventions, e.g. /etc/passwd"]
+    FileFormats = 5,
+    #[name = "6 Games"]
+    Games = 6,
+    #[name = "7 Miscellaneous (including macro packages and conventions), e.g. man(7), groff(7), man-pages(7)"]
+    Miscellaneous = 7,
+    #[name = "8 System administration commands (usually only for root)"]
+    SystemAdministration = 8,
+    #[name = "9 Kernel routines [Non standard]"]
+    KernelRoutines = 9,
+}
+
 /// Consult a man page
 #[poise::command(slash_command, prefix_command)]
-pub(crate) async fn man(ctx: Context<'_>, text: String) -> anyhow::Result<()> {
+pub(crate) async fn man(
+    ctx: Context<'_>,
+    section: Option<Section>,
+    page: String,
+) -> anyhow::Result<()> {
     ctx.defer().await?;
-    debug!("man {}", text);
-    let com = Command::new("man").args(text.split(' ')).output()?;
-    let pages = get_pages(String::from_utf8_lossy(&com.stdout));
+    debug!("man {:?} {}", section, page);
+
+    // prevent arbitrary file reads
+    if !page
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || ".-_+".contains(c))
+    {
+        return Err(UserError::err("invalid man page"));
+    }
+
+    let mut com = Command::new("man");
+    com.env_clear().arg("--");
+    if let Some(sec) = section {
+        com.arg((sec as u8).to_string());
+    }
+    com.arg(&page);
+    let pages = get_pages(String::from_utf8_lossy(&com.output()?.stdout));
 
     let ctx_id = ctx.id();
     let prev_button_id = format!("{}prev", ctx.id());
