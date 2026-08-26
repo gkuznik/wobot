@@ -3,7 +3,7 @@ name = "wobot"
 version = "1.1.0"
 edition = "2024"
 publish = false
-rust-version = "1.88"
+rust-version = "1.94"
 
 [features]
 default = ["activity"]
@@ -12,32 +12,31 @@ activity = []
 [dependencies]
 ab_glyph = "0.2.32"
 anyhow = "1.0.102"
-base64 = "0.23"
+base64 = "0.22"
 chrono = { version = "0.4.44", default-features = false, features = ["std", "clock"] }
 chrono-tz = "0.10.4"
 deser-hjson = "2.2.5"
 deunicode = "1.6.2"
 ics = { version = "0.5.8", default-features = false }
 image = { version = "0.25.5", default-features = false, features = ["jpeg", "png", "webp"] }
-imageproc = "0.26.1"
-itertools = "0.15"
+imageproc = { version = "0.27.0", default-features = false, features = ["text"] }
+itertools = "0.14"
 nonempty = { version = "0.12.0", features = ["serialize"] }
 mini-moka = "0.10.3"
 parse_duration = "2.1.1"
 percent-encoding = "2.3.2"
-poise = "0.6.1"
+poise = "0.6.2"
 rand = "0.10.0"
 regex = "1.12.3"
-reqwest = { version = "0.12.15", features = ["json"] }
-serde = "1.0.228"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
+# need to set the crypto provider
+rustls = { version = "*", default-features = false, features = ["ring"] }
+serde = "1.0.229"
 songbird = { version = "0.6", features = ["builtin-queue", "rustls"] }
-symphonia = { version = "0.6", default-features = false, features = ["mp3", "ogg", "vorbis"] }
-sqlx = { version = "0.8.5", default-features = false, features = ["runtime-tokio", "tls-rustls", "chrono", "postgres", "bigdecimal", "migrate", "macros"] }
-stitchy-core = "0.1.6"
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+# get codecs for songbird, needs to match songbirds version
+symphonia = { version = "0.5", features = ["all"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "tls-rustls", "chrono", "postgres", "migrate", "macros"] }
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.23"
 uwuify = { version = "0.2.2", default-features = false }
-
-[dev-dependencies]
-sqlx-cli = "0.8.6"

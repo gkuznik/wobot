@@ -85,6 +85,9 @@ type Context<'a> = poise::Context<'a, Data, anyhow::Error>;
 
 #[tokio::main]
 async fn main() {
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .ok();
     tracing_subscriber::fmt::init();
 
     let config_data = read_to_string("assets/config.hjson").unwrap_or_default();

@@ -1,11 +1,12 @@
-use crate::constants::HTTP_CLIENT;
 use crate::{Context, UserError};
 use anyhow::Context as _;
 use poise::async_trait;
 use poise::serenity_prelude::GuildId;
-use songbird::input::YoutubeDl;
+use songbird::input::core::io::ReadOnlySource;
+use songbird::input::{AudioStreamError, ChildContainer, RawAdapter};
 use songbird::tracks::TrackHandle;
 use songbird::{Event, EventContext, EventHandler as VoiceEventHandler, Songbird, TrackEvent};
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU8, Ordering};
 use tracing::error;
@@ -69,10 +70,56 @@ async fn play(ctx: Context<'_>, url: String) -> anyhow::Result<()> {
         .join(ctx.guild_id().expect("guild_only"), channel)
         .await
         .context("Failed to join voice channel")?;
-
     let mut handler = handler_lock.lock().await;
-    let src = YoutubeDl::new(HTTP_CLIENT.clone(), url);
-    let song = handler.enqueue_input(src.into()).await;
+
+    let mut ytdl = Command::new("yt-dlp")
+            .args([
+                "-f",
+                "bestaudio",
+                "-o",
+                "-",
+                "-q",
+                "--no-playlist",
+                "--no-part",
+                "--no-keep-fragments",
+                "--downloader",
+                "ffmpeg",
+                "--downloader-args",
+                "ffmpeg:-nostdin -loglevel quiet -reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5",
+                &url,
+            ])
+            .stdout(Stdio::piped())
+            .spawn()
+            .map_err(|e| AudioStreamError::Fail(Box::new(e)))?;
+    let ffmpeg = Command::new("ffmpeg")
+        .args([
+            "-loglevel",
+            "quiet",
+            "-i",
+            "pipe:0",
+            "-f",
+            "f32le", // raw f32 PCM little-endian
+            "-ar",
+            "48000", // 48kHz sample rate (Discord standard)
+            "-ac",
+            "2", // stereo
+            "pipe:1",
+        ])
+        .stdin(
+            ytdl.stdout
+                .take()
+                .ok_or_else(|| AudioStreamError::Fail("yt-dlp stdout was not piped".into()))?,
+        )
+        .stdout(Stdio::piped())
+        .spawn()
+        .map_err(|e| AudioStreamError::Fail(Box::new(e)))?;
+    let source = RawAdapter::new(
+        ReadOnlySource::new(ChildContainer(vec![ytdl, ffmpeg])),
+        48000, // sample rate
+        2,     // stereo
+    );
+
+    let song = handler.enqueue_input(source.into()).await;
     track_song(manager, ctx.guild_id().unwrap(), song)?;
 
     ctx.reply("Added to the queue!").await?;

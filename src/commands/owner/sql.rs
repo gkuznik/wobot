@@ -2,7 +2,7 @@ use crate::Context;
 use itertools::Itertools;
 use poise::CreateReply;
 use poise::serenity_prelude::{CreateAttachment, CreateEmbed};
-use sqlx::{Column, Row};
+use sqlx::{AssertSqlSafe, Column, Row};
 
 fn sql_value_to_string(row: &sqlx::postgres::PgRow, column_index: usize) -> String {
     row.try_get::<Option<String>, usize>(column_index)
@@ -89,7 +89,7 @@ pub(crate) async fn sql(
     }
 
     let pool = &ctx.data().database;
-    let rows = sqlx::query(&query).fetch_all(pool).await?;
+    let rows = sqlx::query(AssertSqlSafe(query)).fetch_all(pool).await?;
 
     if rows.is_empty() {
         ctx.send(

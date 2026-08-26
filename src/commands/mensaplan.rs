@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
 
-use anyhow::anyhow;
 use image::{DynamicImage, GenericImage};
 use itertools::Itertools;
 use mini_moka::sync::Cache;
@@ -11,7 +10,6 @@ use poise::serenity_prelude::json::json;
 use poise::serenity_prelude::{GuildId, UserId};
 use reqwest::{RequestBuilder, Response};
 use serde::{Deserialize, Serialize};
-use stitchy_core::Stitch;
 use tracing::{debug, info};
 
 use crate::commands::utils::send_image;
@@ -198,6 +196,35 @@ pub(crate) async fn show(ctx: Context<'_>) -> anyhow::Result<()> {
     show_plan(ctx).await
 }
 
+fn stitch_images(imgs: &[DynamicImage], width: u32, height: u32) -> DynamicImage {
+    if imgs.is_empty() {
+        return DynamicImage::new_rgba8(width, height);
+    }
+    if imgs.len() == 1 {
+        return imgs[0].resize_exact(width, height, image::imageops::FilterType::Triangle);
+    }
+
+    let n = imgs.len();
+    let cols = (n as f64).sqrt().ceil() as u32;
+    let rows = (n as u32).div_ceil(cols);
+    let cell_w = width / cols;
+    let cell_h = height / rows;
+
+    let mut canvas = DynamicImage::new_rgba8(width, height);
+    for (i, img) in imgs.iter().enumerate() {
+        let col = (i as u32) % cols;
+        let row = (i as u32) / cols;
+        let resized = img.resize_exact(cell_w, cell_h, image::imageops::FilterType::Triangle);
+        image::imageops::overlay(
+            &mut canvas,
+            &resized,
+            (col * cell_w) as i64,
+            (row * cell_h) as i64,
+        );
+    }
+    canvas
+}
+
 async fn show_plan(ctx: Context<'_>) -> anyhow::Result<()> {
     MENSA_PLAN_IMAGE.get_or_init(|| {
         info!("Loading mensa plan image");
@@ -238,12 +265,7 @@ async fn show_plan(ctx: Context<'_>) -> anyhow::Result<()> {
         .into_group_map();
 
     for (tile, imgs) in grouped_avatars {
-        let stitch = Stitch::builder()
-            .images(imgs)
-            .height_limit(SCALING)
-            .width_limit(SCALING)
-            .stitch()
-            .map_err(|e| anyhow!("Failed to stitch images: {}", e))?;
+        let stitch = stitch_images(&imgs, SCALING, SCALING);
         let x = X_OFFSET + tile.0 as u32 * SCALING;
         let y = Y_OFFSET + tile.1 as u32 * SCALING;
         image.copy_from(&stitch, x, y)?;

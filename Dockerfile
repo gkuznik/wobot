@@ -1,8 +1,8 @@
-FROM rust:1.92.0-slim-trixie AS builder
+FROM rust:1.94.0-slim-trixie AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl 7zip \
-    build-essential openssl libssl-dev pkg-config libopus-dev && \
+    build-essential cmake libopus-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # build dependencies first
@@ -36,8 +36,7 @@ sed -i 's/Components: main/Components: main non-free/' /etc/apt/sources.list.d/d
 
 # dependencies + manpages
 apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    libopus0 \
+    ca-certificates libopus0 python3 \
     man manpages-dev manpages-posix manpages-posix-dev
 apt-get install -y --reinstall --no-install-recommends coreutils
 rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*

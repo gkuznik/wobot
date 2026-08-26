@@ -67,7 +67,12 @@ CREATE DATABASE wobot OWNER wobot;
 
 You can then use this `DATABASE_URL`: `postgresql://wobot:wobot@localhost:5432/wobot`
 
-We use [SQLx](https://docs.rs/sqlx/latest/sqlx/) for database access and migrations.
+We use [SQLx](https://docs.rs/sqlx/latest/sqlx/) for database access and migrations. 
+
+```sh
+cargo install sqlx-cli
+```
+
 If you change database queries, you'll need to regenerate the .sqlx folder with:
 
 ```sh
