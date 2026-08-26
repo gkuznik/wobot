@@ -1,7 +1,7 @@
 FROM rust:1.94.0-slim-trixie AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl 7zip \
+    curl 7zip xz-utils \
     build-essential cmake libopus-dev && \
     rm -rf /var/lib/apt/lists/*
 
@@ -20,8 +20,13 @@ COPY .sqlx ./.sqlx
 RUN cargo build --release --locked
 
 RUN curl -fsSL https://deno.land/install.sh | DENO_INSTALL=/usr/local sh
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+RUN curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
     chmod a+rx /usr/local/bin/yt-dlp
+RUN curl -fsSL https://github.com/yt-dlp/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl.tar.xz -o ffmpeg-master-latest-linux64-gpl.tar.xz && \
+    tar -xJf ffmpeg-master-latest-linux64-gpl.tar.xz && \
+    cp ffmpeg-master-latest-linux64-gpl/bin/ffmpeg /usr/local/bin/ && \
+    cp ffmpeg-master-latest-linux64-gpl/bin/ffprobe /usr/local/bin/ && \
+    chmod +x /usr/local/bin/ffmpeg /usr/local/bin/ffprobe
 
 FROM debian:trixie-slim
 

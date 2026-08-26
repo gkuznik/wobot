@@ -22,12 +22,15 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    depends_on:
-      - db
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev
     environment:
+      XDG_CACHE_HOME: /tmp
       DATABASE_URL: postgres://wobot:${POSTGRES_PASSWORD:-example}@db:5432/wobot_db
     env_file:
       - .env
+    depends_on:
+      - db
     volumes:
       - ./assets:/app/assets:ro
     networks:
